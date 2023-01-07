@@ -1,4 +1,6 @@
-package main
+package youtube
+
+// implements source interface
 
 import (
 	"encoding/json"
@@ -10,7 +12,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	what2cook "what2cook/pkg/util"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -19,12 +20,18 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
+type Youtube struct {
+	service      *youtube.Service
+	authFilePath string
+}
+
 const missingClientSecretsMessage = `
 Please configure OAuth 2.0
 `
 
 const ChannelItem = "youtube#channel"
 
+// topics
 const foodTopic = "/m/02wbm"
 
 // getClient uses a Context and Config to retrieve a Token
@@ -111,14 +118,14 @@ func handleError(err error, message string) {
 	}
 }
 
-func GetChannelID(service *youtube.Service, forUsername, topicID string) (string, error) {
+func (yt *Youtube) GetCreator(forUsername, topicID string) (*youtube.Channel, error) {
 	// to start off, I want to able to get video descriptions for the last 20 videos by
 	// a youtuber
 
 	// I am going to have to search for the username (not list)
 	// once I get the channel ID, then I can get the playlistID
 
-	call := service.Search.List([]string{"snippet"})
+	call := yt.service.Search.List([]string{"snippet"})
 	call.Q(forUsername)
 	call.TopicId(topicID)
 	response, err := call.Do()
@@ -127,16 +134,36 @@ func GetChannelID(service *youtube.Service, forUsername, topicID string) (string
 	for _, item := range response.Items {
 		if item.Id != nil && item.Id.Kind == ChannelItem {
 			// successful
-			return item.Id.ChannelId, nil
+			if item.Snippet == nil {
+				log.Fatalln("YT_GetCreator: Received channel without snippet")
+			}
+			return &types.Creator{
+				Id:   item.Snippet.ChannelId,
+				Name: item.Snippet.ChannelTitle,
+			}, nil
 		}
 	}
 	// unsuccessful
-	return "", errors.New("search yielded no results")
+	return nil, errors.New("search yielded no results")
 }
 
-func 
+func GetChannelVideos(service *youtube.Service, channelId string) ([]youtube.Video, error) {
+	call := service.Channels.List([]string{"contentDetails"})
+	call.Id(channelId)
+	response, err := call.Do()
+	handleError(err, "error during getChannelUploadID")
+	// fmt.Println(fmt.Sprintf("This channel's ID is %s. Its title is '%s', "+
+	// 	"and it has %d views.",
+	// 	response.Items[0].Id,
+	// 	response.Items[0].Snippet.Title))
+	numItems := len(response.Items)
+	if numItems == 0 {
+		return nil, errors.New("the api does not work for this channel")
+	}
+	if numItems != 1 {
+		log.Fatalf("getChannelUploadID: searching for channel %s - Expected 1 Item, received %d", forUsername, numItems)
+	}
 
-func GetVideos(service *youtube.Service, forPlaylist string) []what2cook.Video {
 	call := service.PlaylistItems.List([]string{"snippet", "contentDetails"})
 	call.PlaylistId(forPlaylist)
 	call.MaxResults(25)
@@ -153,6 +180,10 @@ func GetVideos(service *youtube.Service, forPlaylist string) []what2cook.Video {
 		})
 	}
 	return videos
+}
+
+func Init() {
+
 }
 
 func main() {
@@ -173,8 +204,6 @@ func main() {
 	}
 	token := getToken(ctx, config)
 
-	// Low priority TODO: replace deprecated function
-	// service, err := youtube.NewService(client)
 	service, err := youtube.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, token)))
 
 	handleError(err, "Error creating YouTube client"+service.BasePath)
