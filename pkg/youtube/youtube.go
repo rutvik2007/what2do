@@ -118,7 +118,7 @@ func handleError(err error, message string) {
 	}
 }
 
-func (yt *Youtube) GetCreator(forUsername, topicID string) (*youtube.Channel, error) {
+func (yt *Youtube) GetChannel(forUsername, topicID string) (*youtube.Channel, error) {
 	// to start off, I want to able to get video descriptions for the last 20 videos by
 	// a youtuber
 
