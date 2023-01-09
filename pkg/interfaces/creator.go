@@ -6,7 +6,8 @@ package interfaces
 // Content []Content
 
 type Creator interface {
-	FetchContent(Source) ([]Content, error)
+	Marshal() []byte
+	// Unmarshal([]byte)
 }
 
 // update catalog

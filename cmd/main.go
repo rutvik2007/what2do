@@ -10,7 +10,7 @@ func main() {
 
 	// as a part of initializing the application, we should start a webserver
 	// the webserver will read the code from the oauth2 request
-	yt := youtube.New("client_secret.json")
+	yt := youtube.New("config/client_secret.json")
 
 	err := yt.Init()
 
@@ -27,12 +27,19 @@ func main() {
 
 	// fmt.Println(getPlaylistVideos(service, uploadPlaylistID))
 
-	sp := w2d_util.SearchParameters{
+	params := w2d_util.SearchParameters{
 		youtube.TopicID: youtube.FoodTopic,
 	}
-	kla, err := yt.GetCreator("Kenji Lopez", sp)
+
+	username := "Kenji Lopez"
+
+	kla, err := yt.GetCreator(username, params)
 	w2d_util.HandleError(err, "Unable to get youtube creator")
 
 	// yt.fetchcontent(kla)???
-	kla.FetchContent(yt)
+	videos, err := yt.FetchContent(kla)
+
+	w2d_util.HandleError(err, "unable to fetch content for "+username)
+
+	fmt.Println(videos)
 }

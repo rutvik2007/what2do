@@ -4,6 +4,7 @@ package youtube
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	ifs "what2cook/pkg/interfaces"
@@ -50,8 +51,9 @@ func (yt *Youtube) getChannel(forUsername, topicID string) (*Channel, error) {
 				log.Fatalln("YT_GetCreator: Received channel without snippet")
 			}
 			return &Channel{
-				Id:   item.Snippet.ChannelId,
-				Name: item.Snippet.ChannelTitle,
+				id:     item.Snippet.ChannelId,
+				name:   item.Snippet.ChannelTitle,
+				videos: make([]ifs.Content, 0),
 			}, nil
 		}
 	}
@@ -97,4 +99,51 @@ func (yt *Youtube) Init() (err error) {
 func (yt *Youtube) GetCreator(username string, params w2d_util.SearchParameters) (ifs.Creator, error) {
 	topic, _ := params.Get(TopicID)
 	return yt.getChannel(username, topic)
+}
+
+func (yt *Youtube) FetchContent(creator ifs.Creator) ([]ifs.Content, error) {
+	// we need to get the upload playlist for the channel
+	c, ok := creator.(*Channel)
+	if !ok {
+		return nil, errors.New("invalid creator type")
+	}
+	channelList := yt.service.Channels.List([]string{contentDetails})
+
+	channelList.Id(c.id)
+	channelDetails, err := channelList.Do()
+	w2d_util.HandleError(err, "error getting upload playlist for channel")
+
+	numItems := len(channelDetails.Items)
+	if numItems == 0 {
+		return nil, errors.New("the api does not work for this channel")
+	} else if numItems != 1 {
+		log.Fatalf("getChannelUploadID: searching for channel %s - Expected 1 Item, received %d",
+			c.name, numItems)
+	}
+
+	if channelDetails.Items[0].ContentDetails == nil || channelDetails.Items[0].ContentDetails.RelatedPlaylists == nil {
+		log.Fatalf("incomplete response from api")
+	}
+
+	uploadsId := channelDetails.Items[0].ContentDetails.RelatedPlaylists.Uploads
+
+	playlistItemsList := yt.service.PlaylistItems.List([]string{snippet, contentDetails})
+	playlistItemsList.PlaylistId(uploadsId)
+	playlistItemsList.MaxResults(50)
+
+	response, err := playlistItemsList.Do()
+
+	w2d_util.HandleError(err, fmt.Sprintf("unable to get videos in playlist %s\n", uploadsId))
+
+	// I need to decide whether videos should be a member of channel??
+	videos := make([]ifs.Content, 0)
+	for _, item := range response.Items {
+		videos = append(videos, &Video{
+			description: item.Snippet.Description,
+			title:       item.Snippet.Title,
+			id:          item.Snippet.ResourceId.VideoId,
+			contentType: ifs.YTVideoType,
+		})
+	}
+	return videos, nil
 }
