@@ -6,6 +6,7 @@ package interfaces
 // Content []Content
 
 type Creator interface {
+	FetchContent(Source) ([]Content, error)
 }
 
 // update catalog

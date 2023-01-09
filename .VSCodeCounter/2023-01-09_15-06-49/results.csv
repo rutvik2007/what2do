@@ -1,0 +1,16 @@
+"filename", "language", "Makefile", "Go Module File", "Go", "Go Checksum File", "JSON", "comment", "blank", "total"
+"/home/rutvik/Desktop/what2cook/Makefile", "Makefile", 2, 0, 0, 0, 0, 0, 0, 2
+"/home/rutvik/Desktop/what2cook/client_secret.json", "JSON", 0, 0, 0, 0, 1, 0, 0, 1
+"/home/rutvik/Desktop/what2cook/cmd/main.go", "Go", 0, 0, 12, 0, 0, 7, 12, 31
+"/home/rutvik/Desktop/what2cook/go.mod", "Go Module File", 0, 23, 0, 0, 0, 0, 4, 27
+"/home/rutvik/Desktop/what2cook/go.sum", "Go Checksum File", 0, 0, 0, 133, 0, 0, 1, 134
+"/home/rutvik/Desktop/what2cook/pkg/interfaces/content.go", "Go", 0, 0, 12, 0, 0, 3, 5, 20
+"/home/rutvik/Desktop/what2cook/pkg/interfaces/creator.go", "Go", 0, 0, 3, 0, 0, 6, 4, 13
+"/home/rutvik/Desktop/what2cook/pkg/interfaces/source.go", "Go", 0, 0, 6, 0, 0, 1, 4, 11
+"/home/rutvik/Desktop/what2cook/pkg/util/search_parameters.go", "Go", 0, 0, 12, 0, 0, 2, 5, 19
+"/home/rutvik/Desktop/what2cook/pkg/util/util.go", "Go", 0, 0, 10, 0, 0, 0, 3, 13
+"/home/rutvik/Desktop/what2cook/pkg/youtube/channel.go", "Go", 0, 0, 44, 0, 0, 3, 12, 59
+"/home/rutvik/Desktop/what2cook/pkg/youtube/util.go", "Go", 0, 0, 77, 0, 0, 12, 15, 104
+"/home/rutvik/Desktop/what2cook/pkg/youtube/video.go", "Go", 0, 0, 20, 0, 0, 1, 7, 28
+"/home/rutvik/Desktop/what2cook/pkg/youtube/youtube.go", "Go", 0, 0, 62, 0, 0, 13, 21, 96
+"Total", "-", 2, 23, 258, 133, 1, 48, 93, 558

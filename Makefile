@@ -1,2 +1,2 @@
 all:
-	go build cmd/main.go -o what2do
+	go build -o what2do cmd/main.go

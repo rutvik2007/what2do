@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"what2cook/pkg/interfaces"
+	ifs "what2cook/pkg/interfaces"
 	w2d_util "what2cook/pkg/util"
 )
 
@@ -12,14 +12,17 @@ import (
 type Channel struct {
 	Id     string
 	Name   string
-	Videos []interfaces.Content
+	Videos []ifs.Content
+	source *Youtube
 }
 
 // func
 
-func (c *Channel) getContent(yt Youtube) ([]interfaces.Content, error) {
+func (c *Channel) FetchContent(src ifs.Source) ([]ifs.Content, error) {
 	// we need to get the upload playlist for the channel
+	yt := src.(*Youtube)
 	channelList := yt.service.Channels.List([]string{contentDetails})
+
 	channelList.Id(c.Id)
 	channelDetails, err := channelList.Do()
 	w2d_util.HandleError(err, "error getting upload playlist for channel")
@@ -45,12 +48,13 @@ func (c *Channel) getContent(yt Youtube) ([]interfaces.Content, error) {
 
 	w2d_util.HandleError(err, fmt.Sprintf("unable to get videos in playlist %s\n", uploadsId))
 
-	videos := make([]interfaces.Content, 0)
+	videos := make([]ifs.Content, 0)
 	for _, item := range response.Items {
 		videos = append(videos, &Video{
 			description: item.Snippet.Description,
 			title:       item.Snippet.Title,
 			id:          item.Snippet.ResourceId.VideoId,
+			contentType: ifs.YTVideoType,
 		})
 	}
 	return videos, nil
