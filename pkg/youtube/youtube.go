@@ -12,6 +12,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"what2cook/pkg/interfaces"
+	w2d_util "what2cook/pkg/util"
 
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
@@ -24,15 +26,6 @@ type Youtube struct {
 	service      *youtube.Service
 	authFilePath string
 }
-
-const missingClientSecretsMessage = `
-Please configure OAuth 2.0
-`
-
-const ChannelItem = "youtube#channel"
-
-// topics
-const foodTopic = "/m/02wbm"
 
 // getClient uses a Context and Config to retrieve a Token
 // then generate a Client. It returns the generated Client.
@@ -109,16 +102,7 @@ func saveToken(file string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func handleError(err error, message string) {
-	if message == "" {
-		message = "Error making API call"
-	}
-	if err != nil {
-		log.Fatalf(message+": %v", err.Error())
-	}
-}
-
-func (yt *Youtube) GetChannel(forUsername, topicID string) (*youtube.Channel, error) {
+func (yt *Youtube) GetChannel(forUsername, topicID string) (*Channel, error) {
 	// to start off, I want to able to get video descriptions for the last 20 videos by
 	// a youtuber
 
@@ -129,15 +113,16 @@ func (yt *Youtube) GetChannel(forUsername, topicID string) (*youtube.Channel, er
 	call.Q(forUsername)
 	call.TopicId(topicID)
 	response, err := call.Do()
-	handleError(err, "error during getChannelUploadID")
+
+	w2d_util.HandleError(err, "error during getChannelUploadID")
 
 	for _, item := range response.Items {
-		if item.Id != nil && item.Id.Kind == ChannelItem {
+		if item.Id != nil && item.Id.Kind == channelType {
 			// successful
 			if item.Snippet == nil {
 				log.Fatalln("YT_GetCreator: Received channel without snippet")
 			}
-			return &types.Creator{
+			return &Channel{
 				Id:   item.Snippet.ChannelId,
 				Name: item.Snippet.ChannelTitle,
 			}, nil
@@ -147,74 +132,37 @@ func (yt *Youtube) GetChannel(forUsername, topicID string) (*youtube.Channel, er
 	return nil, errors.New("search yielded no results")
 }
 
-func GetChannelVideos(service *youtube.Service, channelId string) ([]youtube.Video, error) {
-	call := service.Channels.List([]string{"contentDetails"})
-	call.Id(channelId)
-	response, err := call.Do()
-	handleError(err, "error during getChannelUploadID")
-	// fmt.Println(fmt.Sprintf("This channel's ID is %s. Its title is '%s', "+
-	// 	"and it has %d views.",
-	// 	response.Items[0].Id,
-	// 	response.Items[0].Snippet.Title))
-	numItems := len(response.Items)
-	if numItems == 0 {
-		return nil, errors.New("the api does not work for this channel")
+func New(configFile string) interfaces.Source {
+	return &Youtube{
+		authFilePath: configFile,
 	}
-	if numItems != 1 {
-		log.Fatalf("getChannelUploadID: searching for channel %s - Expected 1 Item, received %d", forUsername, numItems)
-	}
-
-	call := service.PlaylistItems.List([]string{"snippet", "contentDetails"})
-	call.PlaylistId(forPlaylist)
-	call.MaxResults(25)
-	response, err := call.Do()
-
-	handleError(err, fmt.Sprintf("unable to get videos in playlist %s\n", forPlaylist))
-
-	videos := make([]what2cook.Video, 0)
-	for _, item := range response.Items {
-		videos = append(videos, what2cook.Video{
-			Description: item.Snippet.Description,
-			Title:       item.Snippet.Title,
-			VideoId:     item.Snippet.ResourceId.VideoId,
-		})
-	}
-	return videos
 }
 
-func Init() {
-
-}
-
-func main() {
-
-	// TODO: change the
+func (yt *Youtube) Init() (err error) {
 	ctx := context.Background()
 
-	b, err := ioutil.ReadFile("client_secret.json")
+	b, err := ioutil.ReadFile(yt.authFilePath)
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		return
+		// log.Fatalf("Unable to read client secret file: %v", err)
 	}
 
 	// If modifying these scopes, delete your previously saved credentials
 	// at ~/.credentials/youtube-go-quickstart.json
 	config, err := google.ConfigFromJSON(b, youtube.YoutubeReadonlyScope)
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		return
+		// log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
 	token := getToken(ctx, config)
 
 	service, err := youtube.NewService(ctx, option.WithTokenSource(config.TokenSource(ctx, token)))
 
-	handleError(err, "Error creating YouTube client"+service.BasePath)
+	if err != nil {
+		return
+	}
 
-	// aragusea, JKenjiLopezAlt, FoodNetwork, RainbowPlantLife
-	channelId, err := getChannelID(service, "RainbowPlantLife")
+	yt.service = service
 
-	handleError(err, "unable to get upload playlistID")
-
-	fmt.Println(channelId)
-
-	// fmt.Println(getPlaylistVideos(service, uploadPlaylistID))
-
+	return nil
 }

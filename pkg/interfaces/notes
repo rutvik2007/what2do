@@ -1,0 +1,8 @@
+The interface definition should be such that all the functionality you may need from the type
+is available via methods
+
+For example if while using a `Video` type implementing the `Content` interface, if at any time
+I need to accesss some internal field, I will need to use a getter and setter for it
+
+This makes sense because it is likely that I will need to perform similar functionality with
+other types that implement the interface

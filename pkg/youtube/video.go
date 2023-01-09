@@ -1,8 +1,27 @@
 package youtube
 
-// implements content interface
+import "what2cook/pkg/interfaces"
+
+// *Video implements content interface
 type Video struct {
-	Title       string
-	Description string
-	Id          string
+	title       string
+	description string
+	id          string
+	contentType interfaces.ContentType
+}
+
+func (v *Video) Id() string {
+	return v.id
+}
+
+func (v *Video) Description() string {
+	return v.description
+}
+
+func (v *Video) Title() string {
+	return v.title
+}
+
+func (v *Video) Type() interfaces.ContentType {
+	return v.contentType
 }

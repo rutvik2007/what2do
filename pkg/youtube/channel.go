@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"what2cook/pkg/interfaces"
+	w2d_util "what2cook/pkg/util"
 )
 
 // implements creator interface
@@ -14,12 +15,14 @@ type Channel struct {
 	Videos []interfaces.Content
 }
 
-func (c *Channel) GetContent(yt Youtube) ([]interfaces.Content, error) {
+// func
+
+func (c *Channel) getContent(yt Youtube) ([]interfaces.Content, error) {
 	// we need to get the upload playlist for the channel
 	channelList := yt.service.Channels.List([]string{contentDetails})
 	channelList.Id(c.Id)
 	channelDetails, err := channelList.Do()
-	handleError(err, "error getting upload playlist for channel")
+	w2d_util.HandleError(err, "error getting upload playlist for channel")
 
 	numItems := len(channelDetails.Items)
 	if numItems == 0 {
@@ -32,22 +35,23 @@ func (c *Channel) GetContent(yt Youtube) ([]interfaces.Content, error) {
 		log.Fatalf("incomplete response from api")
 	}
 
-	uploadsId := response.Items[0].ContentDetails.RelatedPlaylists.Uploads
+	uploadsId := channelDetails.Items[0].ContentDetails.RelatedPlaylists.Uploads
 
 	playlistItemsList := yt.service.PlaylistItems.List([]string{snippet, contentDetails})
 	playlistItemsList.PlaylistId(uploadsId)
-	playlistItemsList.MaxResults(25)
+	playlistItemsList.MaxResults(50)
+
 	response, err := playlistItemsList.Do()
 
-	handleError(err, fmt.Sprintf("unable to get videos in playlist %s\n", forPlaylist))
+	w2d_util.HandleError(err, fmt.Sprintf("unable to get videos in playlist %s\n", uploadsId))
 
-	videos := make([]Video, 0)
+	videos := make([]interfaces.Content, 0)
 	for _, item := range response.Items {
-		videos = append(videos, Video{
-			Description: item.Snippet.Description,
-			Title:       item.Snippet.Title,
-			Id:          item.Snippet.ResourceId.VideoId,
+		videos = append(videos, &Video{
+			description: item.Snippet.Description,
+			title:       item.Snippet.Title,
+			id:          item.Snippet.ResourceId.VideoId,
 		})
 	}
-	return videos
+	return videos, nil
 }
