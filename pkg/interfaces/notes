@@ -6,3 +6,4 @@ I need to accesss some internal field, I will need to use a getter and setter fo
 
 This makes sense because it is likely that I will need to perform similar functionality with
 other types that implement the interface
+

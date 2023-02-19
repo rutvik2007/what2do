@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"os"
 	w2d_util "what2cook/pkg/util"
 	"what2cook/pkg/youtube"
 )
@@ -37,9 +40,16 @@ func main() {
 	w2d_util.HandleError(err, "Unable to get youtube creator")
 
 	// yt.fetchcontent(kla)???
-	videos, err := yt.FetchContent(kla)
+	videos, err := yt.FetchContent(kla, 500)
 
 	w2d_util.HandleError(err, "unable to fetch content for "+username)
 
-	fmt.Println(videos)
+	// for _, video := range videos {
+	// 	fmt.Println(video.CreatedAt())
+	// }
+	jsonFile, err := json.Marshal(videos)
+	if err != nil {
+		log.Fatalln("Unable to marshal json file")
+	}
+	os.WriteFile("kenji.json", jsonFile, 0777)
 }

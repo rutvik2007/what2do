@@ -19,17 +19,31 @@ const (
 	missingClientSecretsMessage = `
 	Please configure OAuth 2.0
 	`
+)
+
+const (
 	// item types
 	channelType = "youtube#channel"
+)
 
+const (
 	// topicID key for search params
 	TopicID = "TopicID"
+)
+
+const (
 	// topics
 	FoodTopic = "/m/02wbm"
+)
 
+const (
 	// yt query parts
 	contentDetails = "contentDetails"
 	snippet        = "snippet"
+)
+
+const (
+	timeLayout = "2006-01-02T15:04:05Z"
 )
 
 // TODO: move topicID creation to Init

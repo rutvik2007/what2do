@@ -1,5 +1,7 @@
 package interfaces
 
+import "time"
+
 type ContentType int
 
 const (
@@ -14,6 +16,7 @@ type Content interface {
 	Title() string
 	// Do not serialize Type - it is not guaranteed to remain the same
 	Type() ContentType
+	CreatedAt() time.Time
 }
 
 // catalog, update

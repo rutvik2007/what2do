@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 	ifs "what2cook/pkg/interfaces"
 	w2d_util "what2cook/pkg/util"
 
@@ -25,41 +26,6 @@ type Youtube struct {
 // then generate a Client. It returns the generated Client.
 
 var Proteins = []string{"beef", "chicken", ""}
-
-func (yt *Youtube) getChannel(forUsername, topicID string) (*Channel, error) {
-	// to start off, I want to able to get video descriptions for the last 20 videos by
-	// a youtuber
-
-	// I am going to have to search for the username (not list)
-	// once I get the channel ID, then I can get the playlistID
-
-	call := yt.service.Search.List([]string{"snippet"})
-	call.Q(forUsername)
-
-	_, ok := topicIDs[topicID]
-	if ok {
-		call.TopicId(topicID)
-	}
-	response, err := call.Do()
-
-	w2d_util.HandleError(err, "error during getChannelUploadID")
-
-	for _, item := range response.Items {
-		if item.Id != nil && item.Id.Kind == channelType {
-			// successful
-			if item.Snippet == nil {
-				log.Fatalln("YT_GetCreator: Received channel without snippet")
-			}
-			return &Channel{
-				id:     item.Snippet.ChannelId,
-				name:   item.Snippet.ChannelTitle,
-				videos: make([]ifs.Content, 0),
-			}, nil
-		}
-	}
-	// unsuccessful
-	return nil, errors.New("search yielded no results")
-}
 
 func New(configFile string) ifs.Source {
 	return &Youtube{
@@ -101,7 +67,9 @@ func (yt *Youtube) GetCreator(username string, params w2d_util.SearchParameters)
 	return yt.getChannel(username, topic)
 }
 
-func (yt *Youtube) FetchContent(creator ifs.Creator) ([]ifs.Content, error) {
+// FetchContent up to `nContent` videos for the given creator
+// if nContent == -1, fetch all content
+func (yt *Youtube) FetchContent(creator ifs.Creator, nContent int) ([]ifs.Content, error) {
 	// we need to get the upload playlist for the channel
 	c, ok := creator.(*Channel)
 	if !ok {
@@ -131,19 +99,81 @@ func (yt *Youtube) FetchContent(creator ifs.Creator) ([]ifs.Content, error) {
 	playlistItemsList.PlaylistId(uploadsId)
 	playlistItemsList.MaxResults(50)
 
-	response, err := playlistItemsList.Do()
-
-	w2d_util.HandleError(err, fmt.Sprintf("unable to get videos in playlist %s\n", uploadsId))
-
-	// I need to decide whether videos should be a member of channel??
 	videos := make([]ifs.Content, 0)
-	for _, item := range response.Items {
-		videos = append(videos, &Video{
-			description: item.Snippet.Description,
-			title:       item.Snippet.Title,
-			id:          item.Snippet.ResourceId.VideoId,
-			contentType: ifs.YTVideoType,
-		})
+
+	noLimit := false
+	if nContent == -1 {
+		noLimit = true
+	}
+
+	for len(videos) < nContent {
+		response, err := playlistItemsList.Do()
+
+		w2d_util.HandleError(err, fmt.Sprintf("unable to get videos in playlist %s\n", uploadsId))
+
+		if len(response.Items) == 0 {
+			break
+		}
+
+		nItemsToTake := nContent - len(videos)
+		if noLimit || nItemsToTake > len(response.Items) {
+			nItemsToTake = len(response.Items)
+		}
+
+		// I need to decide whether videos should be a member of channel??
+		for _, item := range response.Items[:nItemsToTake] {
+			publishTime, err := time.Parse(timeLayout, item.Snippet.PublishedAt)
+			if err != nil {
+				publishTime = time.Time{}
+			}
+			videos = append(videos, &Video{
+				description:  item.Snippet.Description,
+				title:        item.Snippet.Title,
+				id:           item.Snippet.ResourceId.VideoId,
+				contentType:  ifs.YTVideoType,
+				creationTime: publishTime,
+			})
+		}
+		if response.NextPageToken == "" {
+			break
+		}
+		playlistItemsList.PageToken(response.NextPageToken)
 	}
 	return videos, nil
+}
+
+//-------------- private funk(s) ✨🕺💃🎶
+
+func (yt *Youtube) getChannel(forUsername, topicID string) (*Channel, error) {
+	// to start off, I want to able to get video descriptions for the last 20 videos by
+	// a youtuber
+
+	// I am going to have to search for the username (not list)
+	// once I get the channel ID, then I can get the playlistID
+
+	call := yt.service.Search.List([]string{"snippet"})
+	call.Q(forUsername)
+
+	_, ok := topicIDs[topicID]
+	if ok {
+		call.TopicId(topicID)
+	}
+	response, err := call.Do()
+
+	w2d_util.HandleError(err, "error during getChannelUploadID")
+
+	for _, item := range response.Items {
+		if item.Id != nil && item.Id.Kind == channelType {
+			// successful
+			if item.Snippet == nil {
+				log.Fatalln("YT_GetCreator: Received channel without snippet")
+			}
+			return &Channel{
+				id:   item.Snippet.ChannelId,
+				name: item.Snippet.ChannelTitle,
+			}, nil
+		}
+	}
+	// unsuccessful
+	return nil, errors.New("search yielded no results")
 }
